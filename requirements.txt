@@ -1,0 +1,3 @@
+numpy==2.4.1
+opencv-python==4.13.0.90
+-e git+https://github.com/seekthermal/seekcamera-python.git@3b056f94225a17190d4fd78bb59a690baa5946a9#egg=seekcamera_python
