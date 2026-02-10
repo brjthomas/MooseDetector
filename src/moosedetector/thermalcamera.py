@@ -16,7 +16,6 @@ class ThermalCamera:
     
     def _on_frame_impl(self, camera_frame):
         # Internal SDK Async callback fired whenever a new frame is available.
-        print("Seek SDK Frame Available")
 
         #Make sure we specified a frame callback
         if self._frame_callback is None:
