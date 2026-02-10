@@ -9,6 +9,7 @@ class FramePipeline:
     def __init__(self):
         # Frame buffer for thread-safe frame storage
         self._frame = None
+        self._img_rgb = None
         self._lock = threading.Lock() 
         self._frame_available = threading.Event() 
         self._frames_dropped = 0
@@ -54,6 +55,20 @@ class FramePipeline:
                 "frames_dropped": self._frames_dropped,
                 "drop_rate": self._frames_dropped / max(self._frames_received, 1)
             }
+            
+    def bgra2rgb(self, bgra):
+        row, col, ch = bgra.shape
+
+        assert ch == 4, "ARGB image has 4 channels."
+
+        rgb = np.zeros((row, col, 3), dtype="uint8")
+        # convert to rgb expected to generate the jpeg image
+        rgb[:, :, 0] = bgra[:, :, 2]
+        rgb[:, :, 1] = bgra[:, :, 1]
+        rgb[:, :, 2] = bgra[:, :, 0]
+
+        return rgb
+
 
     def process(self, frame):
         """Process a single frame with YOLO inference
@@ -63,20 +78,20 @@ class FramePipeline:
         """
         self._frame_count += 1
 
-        img = np.array(frame.data)
         # Convert ARGB -> RGB
-        img_rgb = img[:, :, 1:4]
+        self._img_rgb = self.bgra2rgb(frame.data)
 
-        # Run YOLO inference 
-        results = self.model(img_rgb)
+        # Run YOLO inference
+        results = self.model(self._img_rgb, verbose=False)
+
+        return results
+
         
-        # Visualize results
-        self.visualize(img_rgb, results)
 
-    def visualize(self, img, results):
+    def visualize(self, results):
         # results[0].boxes contains the bounding boxes
         # results[0].boxes.xyxy is a NumPy array: [x1, y1, x2, y2]
-        img_copy = img.copy()
+        img_copy = self._img_rgb.copy()
         for box in results[0].boxes.xyxy:
             x1, y1, x2, y2 = map(int, box)
             cv2.rectangle(img_copy, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -95,5 +110,5 @@ class FramePipeline:
 
     def cleanup(self):
         """Clean up resources (must be called from same thread as cv2.imshow)"""
-        cv2.waitKey(100)  # Process pending Qt events
-        cv2.destroyAllWindows()
+        cv2.destroyWindow("YOLO Detection")
+        print("Destroyed cv2 window")

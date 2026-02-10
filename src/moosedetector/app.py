@@ -24,17 +24,16 @@ def main():
             frame = pipeline.get_latest(timeout=0.5)
 
             if frame is not None:
-                # Process the frame (YOLO inference + visualization)
-                pipeline.process(frame)
+                results = pipeline.process(frame) # Process the frame (YOLO inference)
+                pipeline.visualize(results) # Visualize results
             else:
                 # Timeout - no frame received
                 # This is normal during startup or if camera disconnects
                 pass
 
-        # Clean up OpenCV windows (must happen in same thread as imshow)
-        # Give Qt event loop time to process pending events before destroying
         pipeline.cleanup()
         print("Processing thread stopped")
+
 
     # Create and start the thermal camera with the frame callback
     # Camera callback - runs in SDK thread (must be fast!)
@@ -63,7 +62,11 @@ def main():
                   f"Drop Rate={stats['drop_rate']*100:.1f}%")
 
     except KeyboardInterrupt:
+        
         print("\nShutting down...")
+
+        # Stop the camera
+        camera.stop()
 
         # Signal processing thread to stop
         stop_event.set()
@@ -74,8 +77,6 @@ def main():
         if processing_thread.is_alive():
             print("Warning: Processing thread did not stop cleanly")
 
-        # Stop the camera
-        camera.stop()
 
         # Print final statistics
         stats = pipeline.get_stats()
