@@ -42,7 +42,7 @@ class MetricsConfig:
     log_file: Path = Path("/home/moose/projects/MooseDetector/logs/metrics.csv")
     terminal_logging: bool = True
     overlay_display: bool = True
-    fps_smoothing_window: int = 10  # Number of frames to average for FPS calculation
+    fps_smoothing_window: int = 20  # Number of frames to average for FPS calculation
     terminal_log_interval: int = 30  # Print to terminal every N frames
 
     def __post_init__(self):

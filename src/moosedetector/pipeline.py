@@ -79,44 +79,119 @@ class FramePipeline:
 
 
     def process(self, frame):
-        """Process a single frame with YOLO inference
+        """Process a single frame with YOLO tracking
 
         Args:
             frame: Frame object from thermal camera with .data attribute
+
+        Returns:
+            Tuple of (results, detections_list)
+            - results: YOLO results object
+            - detections_list: List of detection dicts with track_id, class_name, confidence, bbox
         """
         self._frame_count += 1
 
         # Convert ARGB -> RGB
         self._img_rgb = self.bgra2rgb(frame.data)
 
-        # Run YOLO inference
-        results = self.model(self._img_rgb, verbose=False)
+        # Run YOLO tracking (not just detection)
+        results = self.model.track(
+            self._img_rgb,
+            persist=True,  # Maintain tracking across frames
+            tracker=self.config.detection.tracker_type,  # "botsort.yaml"
+            conf=self.config.detection.confidence_threshold,  # 0.5
+            verbose=False
+        )
 
-        return results
+        # Extract structured detections with tracking info
+        detections = self._extract_detections(results)
 
-        
+        return results, detections
+
+    def _extract_detections(self, results):
+        """Extract structured detection information with tracking IDs
+
+        Args:
+            results: YOLO tracking results
+
+        Returns:
+            List of detection dicts with keys:
+                - track_id: int, unique object ID (persistent across frames)
+                - class_name: str, detected class
+                - confidence: float, detection confidence
+                - bbox: array, bounding box [x1, y1, x2, y2]
+        """
+        detections = []
+        result = results[0]
+
+        # Check if we have detections
+        if result.boxes is None or len(result.boxes) == 0:
+            return detections
+
+        # Extract tracking IDs if available (will be None on first frame)
+        track_ids = result.boxes.id
+        if track_ids is not None:
+            track_ids = track_ids.cpu().numpy().astype(int)
+        else:
+            # No tracking IDs yet, use index as placeholder
+            track_ids = list(range(len(result.boxes)))
+
+        # Build detection list
+        for i, box in enumerate(result.boxes.xyxy):
+            detections.append({
+                'track_id': int(track_ids[i]),
+                'class_name': self.model.names[int(result.boxes.cls[i])],
+                'confidence': float(result.boxes.conf[i]),
+                'bbox': box.cpu().numpy()
+            })
+
+        return detections
 
     def visualize(self, results, frame_metrics=None):
-        """Visualize detection results with optional metrics overlay
+        """Visualize detection results with tracking IDs and optional metrics overlay
 
         Args:
             results: YOLO results object
             frame_metrics: Optional FrameMetrics to display as overlay
         """
-        # results[0].boxes contains the bounding boxes
-        # results[0].boxes.xyxy is a NumPy array: [x1, y1, x2, y2]
         img_copy = self._img_rgb.copy()
-        for box in results[0].boxes.xyxy:
+        result = results[0]
+
+        # Get tracking IDs if available
+        track_ids = result.boxes.id
+        if track_ids is not None:
+            track_ids = track_ids.cpu().numpy().astype(int)
+        else:
+            track_ids = None
+
+        # Draw bounding boxes with track IDs and class labels
+        for i, box in enumerate(result.boxes.xyxy):
             x1, y1, x2, y2 = map(int, box)
+
+            # Draw rectangle
             cv2.rectangle(img_copy, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-        # Optionally, add labels
-        if results[0].boxes.cls is not None:
-            for box, cls in zip(results[0].boxes.xyxy, results[0].boxes.cls):
-                x1, y1, _, _ = map(int, box)
-                label = f"{self.model.names[int(cls)]}"
-                cv2.putText(img_copy, label, (x1, y1-10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
+            # Create label with class name and track ID
+            if result.boxes.cls is not None:
+                class_name = self.model.names[int(result.boxes.cls[i])]
+                confidence = float(result.boxes.conf[i])
+
+                if track_ids is not None:
+                    # Show track ID if available
+                    label = f"ID:{track_ids[i]} {class_name} {confidence:.2f}"
+                else:
+                    label = f"{class_name} {confidence:.2f}"
+
+                # Draw label background
+                (label_width, label_height), _ = cv2.getTextSize(
+                    label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+                )
+                cv2.rectangle(img_copy, (x1, y1 - label_height - 5),
+                            (x1 + label_width, y1), (0, 255, 0), -1)
+
+                # Draw label text
+                cv2.putText(img_copy, label, (x1, y1 - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
         # Add metrics overlay if provided
         if frame_metrics is not None and self.config.metrics.overlay_display:

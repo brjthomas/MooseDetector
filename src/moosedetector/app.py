@@ -30,18 +30,18 @@ def main():
             frame = pipeline.get_latest(timeout=0.5)
 
             if frame is not None:
-                # Process the frame (YOLO inference)
-                results = pipeline.process(frame)
+                # Process the frame (YOLO tracking)
+                results, detections = pipeline.process(frame)
 
                 # Record metrics from YOLO results
-                objects_detected = len(results[0].boxes) if results[0].boxes is not None else 0
+                objects_detected = len(detections)
                 alert_active = False  # TODO: Will be True when alert manager is integrated
                 frame_metrics = metrics.record_frame(results, objects_detected, alert_active)
 
                 # Log metrics
                 metrics_logger.log(frame_metrics)
 
-                # Visualize results with metrics overlay
+                # Visualize results with tracking IDs and metrics overlay
                 pipeline.visualize(results, frame_metrics)
             else:
                 # Timeout - no frame received
