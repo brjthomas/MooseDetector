@@ -1,0 +1,2 @@
+timestamp,frame_number,preprocess_ms,inference_ms,postprocess_ms,fps,objects_detected,alert_active
+1770756027.664,1,2.3,105.1,0.3,0.0,0,False

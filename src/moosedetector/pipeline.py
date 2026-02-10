@@ -1,23 +1,31 @@
 # Handles data flow. Frame -> pre processing -> inference -> post processing -> output
 
-import numpy as np 
+import numpy as np
 from ultralytics import YOLO
 import cv2
 import threading
+from moosedetector.config import MooseDetectorConfig
+from moosedetector.metrics import MetricsOverlay
 
 class FramePipeline:
-    def __init__(self):
+    
+    def __init__(self, config: MooseDetectorConfig = None):
+        # Use default config if none provided
+        if config is None:
+            config = MooseDetectorConfig()
+        self.config = config
+
         # Frame buffer for thread-safe frame storage
         self._frame = None
         self._img_rgb = None
-        self._lock = threading.Lock() 
-        self._frame_available = threading.Event() 
+        self._lock = threading.Lock()
+        self._frame_available = threading.Event()
         self._frames_dropped = 0
         self._frames_received = 0
         self._frame_count = 0  # For processing
 
         # Load YOLO model
-        self.model = YOLO("/home/moose/projects/MooseDetector/models/yolo26_best_v1.pt")
+        self.model = YOLO(str(config.detection.model_path))
 
     def update(self, frame):
         """Fast, non-blocking update from camera thread"""
@@ -88,7 +96,13 @@ class FramePipeline:
 
         
 
-    def visualize(self, results):
+    def visualize(self, results, frame_metrics=None):
+        """Visualize detection results with optional metrics overlay
+
+        Args:
+            results: YOLO results object
+            frame_metrics: Optional FrameMetrics to display as overlay
+        """
         # results[0].boxes contains the bounding boxes
         # results[0].boxes.xyxy is a NumPy array: [x1, y1, x2, y2]
         img_copy = self._img_rgb.copy()
@@ -104,11 +118,16 @@ class FramePipeline:
                 cv2.putText(img_copy, label, (x1, y1-10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
 
+        # Add metrics overlay if provided
+        if frame_metrics is not None and self.config.metrics.overlay_display:
+            buffer_stats = self.get_stats()
+            img_copy = MetricsOverlay.draw(img_copy, frame_metrics, buffer_stats)
+
         # Show the image
-        cv2.imshow("YOLO Detection", img_copy)
+        cv2.imshow(self.config.display_window_name, img_copy)
         cv2.waitKey(1)  # 1ms delay for live feed
 
     def cleanup(self):
         """Clean up resources (must be called from same thread as cv2.imshow)"""
-        cv2.destroyWindow("YOLO Detection")
+        cv2.destroyWindow(self.config.display_window_name)
         print("Destroyed cv2 window")

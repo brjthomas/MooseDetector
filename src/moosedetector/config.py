@@ -96,7 +96,7 @@ class MooseDetectorConfig:
                 'terminal_logging': self.metrics.terminal_logging,
                 'overlay_display': self.metrics.overlay_display,
                 'fps_smoothing_window': self.metrics.fps_smoothing_window,
-                'terminal_log_interval': self.metrics.metrics.terminal_log_interval,
+                'terminal_log_interval': self.metrics.terminal_log_interval,
             },
             'display_window_name': self.display_window_name,
         }
