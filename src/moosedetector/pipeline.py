@@ -18,9 +18,7 @@ class FramePipeline:
 
         # Run YOLO inference 
         results = self.model(img_rgb)
-
-        print(f"Processed frame {self._frame_count} with shape {img.shape}")
-
+        
         # Visualize results
         self.visualize(img_rgb, results)
 
