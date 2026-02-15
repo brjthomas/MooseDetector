@@ -3,6 +3,7 @@ from moosedetector.pipeline import FramePipeline
 from moosedetector.config import MooseDetectorConfig
 from moosedetector.metrics import PerformanceMetrics, MetricsLogger
 from moosedetector.alert_manager import AlertManager
+from moosedetector.video_recorder import VideoRecorder
 import threading
 import time
 
@@ -20,6 +21,7 @@ def main():
     metrics = PerformanceMetrics(config)
     metrics_logger = MetricsLogger(config)
     alert_manager = AlertManager(config.alert)
+    video_recorder = VideoRecorder(config.data_collection)
 
     # Event to signal shutdown
     stop_event = threading.Event()
@@ -48,7 +50,11 @@ def main():
                 metrics_logger.log(frame_metrics)
 
                 # Visualize results with tracking IDs and metrics overlay
-                pipeline.visualize(results, frame_metrics)
+                overlay_frame = pipeline.visualize(results, frame_metrics)
+
+                # Feed frames to video recorder (pre-buffer or active recording)
+                raw_frame = pipeline.get_current_rgb()
+                video_recorder.feed_frame(raw_frame, overlay_frame)
             else:
                 # Timeout - no frame received
                 # This is normal during startup or if camera disconnects
@@ -58,6 +64,7 @@ def main():
         pipeline.cleanup()
         metrics_logger.close()
         alert_manager.cleanup()
+        video_recorder.cleanup()
         print("Processing thread stopped")
 
 
@@ -83,9 +90,11 @@ def main():
 
             # Print frame buffer statistics every 5 seconds
             stats = pipeline.get_stats()
+            rec_status = "RECORDING" if video_recorder.is_recording else "standby"
             print(f"Stats: Received={stats['frames_received']}, "
                   f"Dropped={stats['frames_dropped']}, "
-                  f"Drop Rate={stats['drop_rate']*100:.1f}%")
+                  f"Drop Rate={stats['drop_rate']*100:.1f}% | "
+                  f"Recording: {rec_status}")
 
     except KeyboardInterrupt:
         

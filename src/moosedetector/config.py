@@ -60,11 +60,39 @@ class MetricsConfig:
 
 
 @dataclass
+class DataCollectionConfig:
+    """Video recording and data collection configuration"""
+    button_pin: int = 23          # BCM pin for record toggle button
+    led_pin: int = 24             # BCM pin for recording indicator LED
+    pre_buffer_seconds: float = 10.0  # Seconds of pre-recording buffer
+    fps: float = 9.0              # Camera FPS (for buffer size and VideoWriter)
+    save_directory: Path = Path("/home/moose/projects/MooseDetector/videos")
+    enabled: bool = True
+
+    def __post_init__(self):
+        """Validate configuration"""
+        if not isinstance(self.save_directory, Path):
+            self.save_directory = Path(self.save_directory)
+        if self.button_pin < 0 or self.button_pin > 27:
+            raise ValueError(f"Button GPIO pin must be between 0 and 27, got {self.button_pin}")
+        if self.led_pin < 0 or self.led_pin > 27:
+            raise ValueError(f"LED GPIO pin must be between 0 and 27, got {self.led_pin}")
+        if self.pre_buffer_seconds < 0:
+            raise ValueError(f"Pre-buffer seconds must be non-negative, got {self.pre_buffer_seconds}")
+
+    @property
+    def buffer_maxlen(self) -> int:
+        """Calculate circular buffer size from seconds and FPS"""
+        return int(self.pre_buffer_seconds * self.fps)
+
+
+@dataclass
 class MooseDetectorConfig:
     """Main configuration container for MooseDetector"""
     detection: DetectionConfig = field(default_factory=DetectionConfig)
     alert: AlertConfig = field(default_factory=AlertConfig)
     metrics: MetricsConfig = field(default_factory=MetricsConfig)
+    data_collection: DataCollectionConfig = field(default_factory=DataCollectionConfig)
     display_window_name: str = "MooseDetector - Thermal Detection"
 
     @classmethod
@@ -74,6 +102,7 @@ class MooseDetectorConfig:
             detection=DetectionConfig(**config_dict.get('detection', {})),
             alert=AlertConfig(**config_dict.get('alert', {})),
             metrics=MetricsConfig(**config_dict.get('metrics', {})),
+            data_collection=DataCollectionConfig(**config_dict.get('data_collection', {})),
             display_window_name=config_dict.get('display_window_name', cls.display_window_name)
         )
 
@@ -97,6 +126,14 @@ class MooseDetectorConfig:
                 'overlay_display': self.metrics.overlay_display,
                 'fps_smoothing_window': self.metrics.fps_smoothing_window,
                 'terminal_log_interval': self.metrics.terminal_log_interval,
+            },
+            'data_collection': {
+                'button_pin': self.data_collection.button_pin,
+                'led_pin': self.data_collection.led_pin,
+                'pre_buffer_seconds': self.data_collection.pre_buffer_seconds,
+                'fps': self.data_collection.fps,
+                'save_directory': str(self.data_collection.save_directory),
+                'enabled': self.data_collection.enabled,
             },
             'display_window_name': self.display_window_name,
         }

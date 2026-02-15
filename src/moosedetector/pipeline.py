@@ -202,6 +202,12 @@ class FramePipeline:
         cv2.imshow(self.config.display_window_name, img_copy)
         cv2.waitKey(1)  # 1ms delay for live feed
 
+        return img_copy  # Return overlay frame for recording
+
+    def get_current_rgb(self):
+        """Return the most recently converted RGB frame (for recording)"""
+        return self._img_rgb
+
     def cleanup(self):
         """Clean up resources (must be called from same thread as cv2.imshow)"""
         cv2.destroyWindow(self.config.display_window_name)
