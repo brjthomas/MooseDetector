@@ -26,7 +26,7 @@ class AlertConfig:
     gpio_pin: int = 17  # BCM numbering
     alert_classes: List[str] = field(default_factory=lambda: ["Animal", "person"])
     object_persistence_frames: int = 30  # Keep alert active for ~3.3s after object disappears (at 9 FPS)
-    enabled: bool = True
+    enabled: bool = False
 
     def __post_init__(self):
         """Validate configuration"""

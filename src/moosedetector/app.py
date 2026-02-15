@@ -2,6 +2,7 @@ from moosedetector.thermalcamera import ThermalCamera
 from moosedetector.pipeline import FramePipeline
 from moosedetector.config import MooseDetectorConfig
 from moosedetector.metrics import PerformanceMetrics, MetricsLogger
+from moosedetector.alert_manager import AlertManager
 import threading
 import time
 
@@ -14,9 +15,11 @@ def main():
     # Load configuration
     config = MooseDetectorConfig()
 
-    pipeline = FramePipeline(config) # Create the frame processing pipeline
-    metrics = PerformanceMetrics(config)  # Create metrics system
-    metrics_logger = MetricsLogger(config)  # Create metrics system
+    # Create components
+    pipeline = FramePipeline(config)
+    metrics = PerformanceMetrics(config)
+    metrics_logger = MetricsLogger(config)
+    alert_manager = AlertManager(config.alert)
 
     # Event to signal shutdown
     stop_event = threading.Event()
@@ -33,9 +36,12 @@ def main():
                 # Process the frame (YOLO tracking)
                 results, detections = pipeline.process(frame)
 
+                # Update alert manager with tracked detections
+                alert_manager.update(detections)
+                alert_active = alert_manager.get_alert_state()
+
                 # Record metrics from YOLO results
                 objects_detected = len(detections)
-                alert_active = False  # TODO: Will be True when alert manager is integrated
                 frame_metrics = metrics.record_frame(results, objects_detected, alert_active)
 
                 # Log metrics
@@ -51,6 +57,7 @@ def main():
         # Cleanup
         pipeline.cleanup()
         metrics_logger.close()
+        alert_manager.cleanup()
         print("Processing thread stopped")
 
 
