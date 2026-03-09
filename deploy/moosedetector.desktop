@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=MooseDetector
+Comment=Thermal Camera YOLO Detection
+Type=Application
+Exec=env PYTHONPATH=/home/moose/projects/MooseDetector/src LD_LIBRARY_PATH=/home/moose/projects/ThermalCameraSDK/Seek_Thermal_SDK_4.4.2.20/aarch64-linux-gnu/lib /home/moose/projects/MooseDetector/venv/bin/python3 /home/moose/projects/MooseDetector/src/main.py
+Terminal=true
+X-GNOME-Autostart-enabled=true

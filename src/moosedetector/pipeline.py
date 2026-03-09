@@ -23,6 +23,7 @@ class FramePipeline:
         self._frames_dropped = 0
         self._frames_received = 0
         self._frame_count = 0  # For processing
+        self._window_initialized = False
 
         # Load YOLO model
         self.model = YOLO(str(config.detection.model_path))
@@ -199,6 +200,14 @@ class FramePipeline:
             img_copy = MetricsOverlay.draw(img_copy, frame_metrics, buffer_stats)
 
         # Show the image
+        if not self._window_initialized:
+            cv2.namedWindow(self.config.display_window_name, cv2.WINDOW_NORMAL)
+            cv2.setWindowProperty(
+                self.config.display_window_name,
+                cv2.WND_PROP_FULLSCREEN,
+                cv2.WINDOW_FULLSCREEN
+            )
+            self._window_initialized = True
         cv2.imshow(self.config.display_window_name, img_copy)
         cv2.waitKey(1)  # 1ms delay for live feed
 
