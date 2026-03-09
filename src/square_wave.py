@@ -8,8 +8,8 @@ import RPi.GPIO as GPIO
 import time
 
 # --- Configuration ---
-GPIO_PIN = 18       # BCM pin number (pin 18 supports hardware PWM on Pi)
-FREQUENCY_HZ = 2000 # 2 kHz
+GPIO_PIN = 17       # BCM pin number (pin 18 supports hardware PWM on Pi)
+FREQUENCY_HZ = 5600 # 2 kHz
 DUTY_CYCLE = 50     # 50% duty cycle = true square wave
 # ---------------------
 

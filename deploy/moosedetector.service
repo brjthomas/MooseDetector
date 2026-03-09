@@ -5,21 +5,18 @@ Wants=graphical.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/MooseDetector
-
+User=moose
+WorkingDirectory=/home/moose/projects/MooseDetector
 # Set PYTHONPATH so 'moosedetector' package is importable from src/
-Environment=PYTHONPATH=/home/pi/MooseDetector/src
+Environment=PYTHONPATH=/home/moose/MooseDetector/src
 # Required for cv2.imshow to find the display
 Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/pi/.Xauthority
-
-ExecStart=/usr/bin/python3 /home/pi/MooseDetector/src/main.py
-
+Environment=XAUTHORITY=/home/moose/.Xauthority
+Environment=LD_LIBRARY_PATH=/home/moose/projects/ThermalCameraSDK/Seek_Thermal_SDK_4.4.2.20/aarch64-linux-gnu/lib
+ExecStart=/home/moose/projects/MooseDetector/venv/bin/python3 /home/moose/projects/MooseDetector/src/main.py
 # Restart automatically if the process crashes
-Restart=on-failure
-RestartSec=5
-
+# Restart=on-failure
+# RestartSec=5
 # Log stdout/stderr to the systemd journal (view with: journalctl -u moosedetector)
 StandardOutput=journal
 StandardError=journal
